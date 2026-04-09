@@ -20,7 +20,12 @@ import { parseModelString } from '@/lib/ai/providers';
 import { resolveApiKey, resolveWebSearchApiKey } from '@/lib/server/provider-config';
 import { resolveModel } from '@/lib/server/resolve-model';
 import { buildSearchQuery } from '@/lib/server/search-query-builder';
-import { searchWithTavily, formatSearchResultsAsContext } from '@/lib/web-search/tavily';
+import {
+  searchWithTavily,
+  formatSearchResultsAsContext,
+} from '@/lib/web-search/tavily';
+import { searchWithClaude } from '@/lib/web-search/claude';
+import { WEB_SEARCH_PROVIDERS } from '@/lib/web-search/constants';
 import { persistClassroom } from '@/lib/server/classroom-storage';
 import {
   generateMediaForClassroom,
@@ -38,6 +43,10 @@ export interface GenerateClassroomInput {
   pdfContent?: { text: string; images: string[] };
   language?: string;
   enableWebSearch?: boolean;
+  webSearchProviderId?: string;
+  webSearchBaseUrl?: string;
+  webSearchModelId?: string;
+  webSearchTools?: Array<{ type: string; name: string }>;
   enableImageGeneration?: boolean;
   enableVideoGeneration?: boolean;
   enableTTS?: boolean;
@@ -254,22 +263,45 @@ export async function generateClassroom(
   // Web search (optional, graceful degradation)
   let researchContext: string | undefined;
   if (input.enableWebSearch) {
-    const tavilyKey = resolveWebSearchApiKey();
-    if (tavilyKey) {
+    // The providerId should ideally be fetched from the user's settings store.
+    // Since this is a server-side function, we'd typically pass the user's current providerId in the input.
+    // For now, we'll use a default or assume it's passed in the request (mocking the settings lookup).
+    const providerId = input.webSearchProviderId || 'tavily';
+    const searchKey = resolveWebSearchApiKey(providerId);
+    if (searchKey) {
       try {
         const searchQuery = await buildSearchQuery(requirement, pdfText, searchQueryAiCall);
 
         log.info('Running web search for classroom generation', {
+          provider: providerId,
           hasPdfContext: searchQuery.hasPdfContext,
           rawRequirementLength: searchQuery.rawRequirementLength,
           rewriteAttempted: searchQuery.rewriteAttempted,
           finalQueryLength: searchQuery.finalQueryLength,
         });
 
-        const searchResult = await searchWithTavily({
-          query: searchQuery.query,
-          apiKey: tavilyKey,
-        });
+        const effectiveBaseUrl =
+          input.webSearchBaseUrl ||
+          WEB_SEARCH_PROVIDERS[providerId as keyof typeof WEB_SEARCH_PROVIDERS]?.defaultBaseUrl ||
+          '';
+
+        let searchResult;
+        if (providerId === 'claude') {
+          searchResult = await searchWithClaude({
+            query: searchQuery.query,
+            apiKey: searchKey,
+            baseUrl: effectiveBaseUrl,
+            modelId: input.webSearchModelId,
+            tools: input.webSearchTools,
+          });
+        } else {
+          searchResult = await searchWithTavily({
+            query: searchQuery.query,
+            apiKey: searchKey,
+            baseUrl: effectiveBaseUrl,
+          });
+        }
+
         researchContext = formatSearchResultsAsContext(searchResult);
         if (researchContext) {
           log.info(`Web search returned ${searchResult.sources.length} sources`);
@@ -278,7 +310,9 @@ export async function generateClassroom(
         log.warn('Web search failed, continuing without search context:', e);
       }
     } else {
-      log.warn('enableWebSearch is true but no Tavily API key configured, skipping web search');
+      log.warn(
+        `enableWebSearch is true but no API key configured for ${providerId}, skipping web search`,
+      );
     }
   }
 
