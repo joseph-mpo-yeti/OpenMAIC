@@ -420,6 +420,7 @@ export function resolveWebSearchApiKey(providerId: string, clientKey?: string): 
   const serverKey = getConfig().webSearch[providerId]?.apiKey;
   if (serverKey) return serverKey;
   // Claude web search reuses the standard Anthropic API key
-  const envVar = providerId === 'claude' ? 'ANTHROPIC_API_KEY' : `${providerId.toUpperCase()}_API_KEY`;
+  const envVar =
+    providerId === 'claude' ? 'ANTHROPIC_API_KEY' : `${providerId.toUpperCase()}_API_KEY`;
   return process.env[envVar] || '';
 }

@@ -53,13 +53,7 @@ export async function searchWithClaude(params: {
   baseUrl: string;
   tools?: Array<{ type: string; name: string }>;
 }): Promise<WebSearchResult> {
-  const {
-    query,
-    apiKey,
-    modelId = 'claude-sonnet-4-6',
-    baseUrl,
-    tools,
-  } = params;
+  const { query, apiKey, modelId = 'claude-sonnet-4-6', baseUrl, tools } = params;
 
   const apiVersion = '2023-06-01';
 
@@ -84,9 +78,7 @@ export async function searchWithClaude(params: {
             content: `Search for the following and provide a comprehensive summary with source links: ${query}.`,
           },
         ],
-        tools: tools?.length
-          ? tools
-          : [{ type: 'web_search_20260209', name: 'web_search' }],
+        tools: tools?.length ? tools : [{ type: 'web_search_20260209', name: 'web_search' }],
       }),
     });
 

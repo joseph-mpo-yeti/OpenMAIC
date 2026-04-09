@@ -150,9 +150,7 @@ export function WebSearchModelDialog({
                 )}
               >
                 <div className="flex items-start gap-2 min-w-0">
-                  {testStatus === 'success' && (
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-                  )}
+                  {testStatus === 'success' && <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />}
                   {testStatus === 'error' && <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
                   <p className="flex-1 min-w-0 break-all">{testMessage}</p>
                 </div>

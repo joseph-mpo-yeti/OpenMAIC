@@ -20,10 +20,7 @@ import { isProviderKeyRequired } from '@/lib/ai/providers';
 import { resolveWebSearchApiKey } from '@/lib/server/provider-config';
 import { resolveModel } from '@/lib/server/resolve-model';
 import { buildSearchQuery } from '@/lib/server/search-query-builder';
-import {
-  searchWithTavily,
-  formatSearchResultsAsContext,
-} from '@/lib/web-search/tavily';
+import { searchWithTavily, formatSearchResultsAsContext } from '@/lib/web-search/tavily';
 import { searchWithClaude } from '@/lib/web-search/claude';
 import { WEB_SEARCH_PROVIDERS } from '@/lib/web-search/constants';
 import { persistClassroom } from '@/lib/server/classroom-storage';

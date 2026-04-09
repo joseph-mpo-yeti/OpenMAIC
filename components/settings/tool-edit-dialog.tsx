@@ -33,7 +33,11 @@ export function ToolEditDialog({ open, onOpenChange, tool, setTool, onSave }: To
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[400px]">
-        <DialogTitle>{tool.type === '' ? t('settings.webSearchAddToolTitle') : t('settings.webSearchEditToolTitle')}</DialogTitle>
+        <DialogTitle>
+          {tool.type === ''
+            ? t('settings.webSearchAddToolTitle')
+            : t('settings.webSearchEditToolTitle')}
+        </DialogTitle>
         <DialogDescription>{t('settings.webSearchToolDialogDesc')}</DialogDescription>
         <div className="space-y-4 py-4">
           <div className="space-y-2">

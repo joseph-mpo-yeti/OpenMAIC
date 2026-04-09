@@ -47,7 +47,9 @@ describe('searchWithClaude', () => {
     mockProxyFetch.mockReset();
   });
 
-  async function search(params: Parameters<typeof import('@/lib/web-search/claude').searchWithClaude>[0]) {
+  async function search(
+    params: Parameters<typeof import('@/lib/web-search/claude').searchWithClaude>[0],
+  ) {
     const { searchWithClaude } = await import('@/lib/web-search/claude');
     return searchWithClaude(params);
   }
@@ -104,9 +106,7 @@ describe('searchWithClaude', () => {
       content: [
         {
           type: 'web_search_tool_result',
-          content: [
-            { type: 'web_search_result', url: 'https://example.com', title: 'Example' },
-          ],
+          content: [{ type: 'web_search_result', url: 'https://example.com', title: 'Example' }],
         },
         { type: 'text', text: 'Answer', citations: [] },
       ],

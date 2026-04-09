@@ -363,7 +363,17 @@ const getDefaultWebSearchConfig = () => ({
       tools: [{ type: 'web_search_20260209', name: 'web_search' }],
       models: WEB_SEARCH_PROVIDERS.claude?.models?.map((m) => ({ id: m.id, name: m.name })) ?? [],
     },
-  } as Record<WebSearchProviderId, { apiKey: string; baseUrl: string; enabled: boolean; modelId?: string; tools?: Array<{ type: string; name: string }>; models?: Array<{ id: string; name: string }> }>,
+  } as Record<
+    WebSearchProviderId,
+    {
+      apiKey: string;
+      baseUrl: string;
+      enabled: boolean;
+      modelId?: string;
+      tools?: Array<{ type: string; name: string }>;
+      models?: Array<{ id: string; name: string }>;
+    }
+  >,
 });
 
 /**
@@ -821,9 +831,7 @@ export const useSettingsStore = create<SettingsState>()(
               ...config,
             };
             const apiKeyRemoved =
-              'apiKey' in config &&
-              !config.apiKey &&
-              !updatedProviderConfig.isServerConfigured;
+              'apiKey' in config && !config.apiKey && !updatedProviderConfig.isServerConfigured;
             const isSelected = state.webSearchProviderId === providerId;
             return {
               webSearchProvidersConfig: {

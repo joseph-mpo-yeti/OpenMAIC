@@ -556,7 +556,9 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
         );
       }
       case 'web-search': {
-        const wsProvider = selectedWebSearchProviderId ? WEB_SEARCH_PROVIDERS[selectedWebSearchProviderId] : null;
+        const wsProvider = selectedWebSearchProviderId
+          ? WEB_SEARCH_PROVIDERS[selectedWebSearchProviderId]
+          : null;
         if (!wsProvider) return null;
         return (
           <>
