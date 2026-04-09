@@ -266,7 +266,12 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
               autoCorrect="off"
               spellCheck={false}
               placeholder={provider.defaultBaseUrl || 'https://api.example.com'}
-              value={webSearchProvidersConfig[selectedProviderId]?.baseUrl || ''}
+              value={
+                webSearchProvidersConfig[selectedProviderId]?.baseUrl ===
+                (WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl ?? '')
+                  ? ''
+                  : webSearchProvidersConfig[selectedProviderId]?.baseUrl || ''
+              }
               onChange={(e) =>
                 setWebSearchProviderConfig(selectedProviderId, {
                   baseUrl: e.target.value,

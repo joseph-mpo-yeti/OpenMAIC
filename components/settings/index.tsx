@@ -211,7 +211,7 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
   const [selectedProviderId, setSelectedProviderId] = useState<ProviderId>(providerId);
   const [selectedPdfProviderId, setSelectedPdfProviderId] = useState<PDFProviderId>(pdfProviderId);
   const [selectedWebSearchProviderId, setSelectedWebSearchProviderId] =
-    useState<WebSearchProviderId | null>(webSearchProviderId);
+    useState<WebSearchProviderId | null>(webSearchProviderId ?? 'tavily');
   const [selectedImageProviderId, setSelectedImageProviderId] =
     useState<ImageProviderId>(imageProviderId);
   const [selectedVideoProviderId, setSelectedVideoProviderId] =
