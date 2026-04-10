@@ -258,10 +258,17 @@ export async function generateClassroom(
   // Web search (optional, graceful degradation)
   let researchContext: string | undefined;
   if (input.enableWebSearch) {
-    // The providerId should ideally be fetched from the user's settings store.
-    // Since this is a server-side function, we'd typically pass the user's current providerId in the input.
-    // For now, we'll use a default or assume it's passed in the request (mocking the settings lookup).
-    const providerId = input.webSearchProviderId || 'tavily';
+    // Validate and resolve the provider ID; unknown values are treated as 'tavily' (safe default).
+    const rawProviderId = input.webSearchProviderId || 'tavily';
+    const providerId =
+      rawProviderId in WEB_SEARCH_PROVIDERS
+        ? (rawProviderId as keyof typeof WEB_SEARCH_PROVIDERS)
+        : ('tavily' as const);
+    if (rawProviderId !== providerId) {
+      log.warn(
+        `Unknown webSearchProviderId "${rawProviderId}", falling back to tavily`,
+      );
+    }
     const searchKey = resolveWebSearchApiKey(providerId);
     if (searchKey) {
       try {
@@ -277,7 +284,7 @@ export async function generateClassroom(
 
         const effectiveBaseUrl =
           input.webSearchBaseUrl ||
-          WEB_SEARCH_PROVIDERS[providerId as keyof typeof WEB_SEARCH_PROVIDERS]?.defaultBaseUrl ||
+          WEB_SEARCH_PROVIDERS[providerId]?.defaultBaseUrl ||
           '';
 
         let searchResult;

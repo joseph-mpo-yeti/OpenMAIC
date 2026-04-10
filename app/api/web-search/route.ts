@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!(providerId in WEB_SEARCH_PROVIDERS)) {
+      return apiError('INVALID_REQUEST', 400, `Unknown web search provider: ${providerId}`);
+    }
+
     const apiKey = resolveWebSearchApiKey(providerId, clientApiKey);
     if (!apiKey) {
       const envVar = providerId === 'claude' ? 'ANTHROPIC_API_KEY' : 'TAVILY_API_KEY';

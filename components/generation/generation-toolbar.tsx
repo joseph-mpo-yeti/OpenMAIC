@@ -364,10 +364,10 @@ export function GenerationToolbar({
                         .map((provider) => {
                           const cfg = webSearchProvidersConfig[provider.id as WebSearchProviderId];
                           const isActive = webSearchProviderId === provider.id && webSearch;
-                          const hasModels = !!(
-                            cfg?.models?.length ||
-                            WEB_SEARCH_PROVIDERS[provider.id as WebSearchProviderId]?.models?.length
-                          );
+                          const builtinModels =
+                            WEB_SEARCH_PROVIDERS[provider.id as WebSearchProviderId]?.models || [];
+                          const effectiveModels = cfg?.models?.length ? cfg.models : builtinModels;
+                          const hasModels = effectiveModels.length > 0;
 
                           return (
                             <button
@@ -434,7 +434,9 @@ export function GenerationToolbar({
                   (() => {
                     const cfg = webSearchProvidersConfig[drillWebSearchProvider];
                     const provider = WEB_SEARCH_PROVIDERS[drillWebSearchProvider];
-                    const models = cfg?.models || [];
+                    const models = cfg?.models?.length
+                      ? cfg.models
+                      : (provider?.models || []);
                     const selectedModelId = cfg?.modelId || '';
                     return (
                       <div className="max-h-72 overflow-y-auto">

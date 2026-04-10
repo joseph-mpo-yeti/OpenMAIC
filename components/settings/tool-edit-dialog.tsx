@@ -29,6 +29,8 @@ export function ToolEditDialog({ open, onOpenChange, tool, setTool, onSave }: To
 
   if (!tool) return null;
 
+  const canSave = !!(tool.type.trim() && tool.name.trim());
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[400px]">
@@ -59,7 +61,7 @@ export function ToolEditDialog({ open, onOpenChange, tool, setTool, onSave }: To
             <Button variant="outline" onClick={handleClose}>
               {t('settings.cancelEdit')}
             </Button>
-            <Button onClick={onSave}>{t('settings.saveModel')}</Button>
+            <Button onClick={onSave} disabled={!canSave}>{t('settings.saveModel')}</Button>
           </div>
         </div>
       </DialogContent>
