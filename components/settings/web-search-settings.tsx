@@ -63,7 +63,6 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             apiKey,
-            baseUrl: baseUrl || undefined,
             model: `anthropic:${modelId}`,
             providerType: 'anthropic',
             requiresApiKey: !isServerConfigured,
@@ -431,11 +430,6 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
         onSave={handleSaveModel}
         isEditing={editingModelIndex !== null}
         apiKey={webSearchProvidersConfig[selectedProviderId]?.apiKey || ''}
-        baseUrl={
-          webSearchProvidersConfig[selectedProviderId]?.baseUrl ||
-          WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl ||
-          ''
-        }
         isServerConfigured={isServerConfigured}
       />
     </div>

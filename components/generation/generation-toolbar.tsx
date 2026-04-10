@@ -415,6 +415,12 @@ export function GenerationToolbar({
                                     {t('settings.serverConfigured')}
                                   </span>
                                 )}
+                                {hasModels && cfg?.modelId && (
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-[80px] font-mono">
+                                    {effectiveModels.find((m) => m.id === cfg.modelId)?.name ||
+                                      cfg.modelId}
+                                  </span>
+                                )}
                                 {isActive && !hasModels && (
                                   <Check className="size-3.5 text-violet-600 dark:text-violet-400" />
                                 )}
@@ -434,9 +440,7 @@ export function GenerationToolbar({
                   (() => {
                     const cfg = webSearchProvidersConfig[drillWebSearchProvider];
                     const provider = WEB_SEARCH_PROVIDERS[drillWebSearchProvider];
-                    const models = cfg?.models?.length
-                      ? cfg.models
-                      : (provider?.models || []);
+                    const models = cfg?.models?.length ? cfg.models : provider?.models || [];
                     const selectedModelId = cfg?.modelId || '';
                     return (
                       <div className="max-h-72 overflow-y-auto">
@@ -502,15 +506,20 @@ export function GenerationToolbar({
               const providerName =
                 WEB_SEARCH_PROVIDERS[webSearchProviderId]?.name || webSearchProviderId;
               const cfg = webSearchProvidersConfig[webSearchProviderId];
-              if (webSearchProviderId === 'claude' && cfg?.modelId) {
-                const models = cfg.models || [];
-                const modelName = models.find((m) => m.id === cfg.modelId)?.name || cfg.modelId;
+              const builtinModels =
+                WEB_SEARCH_PROVIDERS[webSearchProviderId as WebSearchProviderId]?.models || [];
+              const effectiveModels = cfg?.models?.length ? cfg.models : builtinModels;
+              if (cfg?.modelId) {
+                const modelName =
+                  effectiveModels.find((m) => m.id === cfg.modelId)?.name || cfg.modelId;
                 return `${providerName} / ${modelName}`;
               }
               return providerName;
             })()}
           </TooltipContent>
-        ) : null}
+        ) : (
+          <TooltipContent>{t('toolbar.webSearchProvider')}</TooltipContent>
+        )}
       </Tooltip>
 
       {/* ── Language pill ── */}

@@ -61,7 +61,9 @@ export function ToolEditDialog({ open, onOpenChange, tool, setTool, onSave }: To
             <Button variant="outline" onClick={handleClose}>
               {t('settings.cancelEdit')}
             </Button>
-            <Button onClick={onSave} disabled={!canSave}>{t('settings.saveModel')}</Button>
+            <Button onClick={onSave} disabled={!canSave}>
+              {t('settings.saveModel')}
+            </Button>
           </div>
         </div>
       </DialogContent>

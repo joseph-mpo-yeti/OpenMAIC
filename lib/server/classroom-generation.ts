@@ -265,9 +265,7 @@ export async function generateClassroom(
         ? (rawProviderId as keyof typeof WEB_SEARCH_PROVIDERS)
         : ('tavily' as const);
     if (rawProviderId !== providerId) {
-      log.warn(
-        `Unknown webSearchProviderId "${rawProviderId}", falling back to tavily`,
-      );
+      log.warn(`Unknown webSearchProviderId "${rawProviderId}", falling back to tavily`);
     }
     const searchKey = resolveWebSearchApiKey(providerId);
     if (searchKey) {
@@ -283,9 +281,7 @@ export async function generateClassroom(
         });
 
         const effectiveBaseUrl =
-          input.webSearchBaseUrl ||
-          WEB_SEARCH_PROVIDERS[providerId]?.defaultBaseUrl ||
-          '';
+          input.webSearchBaseUrl || WEB_SEARCH_PROVIDERS[providerId]?.defaultBaseUrl || '';
 
         let searchResult;
         if (providerId === 'claude') {
