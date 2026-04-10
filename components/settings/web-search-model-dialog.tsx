@@ -25,6 +25,7 @@ interface WebSearchModelDialogProps {
   isEditing: boolean;
   apiKey?: string;
   isServerConfigured?: boolean;
+  baseUrl?: string;
 }
 
 export function WebSearchModelDialog({
@@ -36,6 +37,7 @@ export function WebSearchModelDialog({
   isEditing,
   apiKey,
   isServerConfigured,
+  baseUrl,
 }: WebSearchModelDialogProps) {
   const { t } = useI18n();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -54,6 +56,7 @@ export function WebSearchModelDialog({
         body: JSON.stringify({
           apiKey,
           model: `anthropic:${model.id}`,
+          baseUrl: baseUrl || '',
           providerType: 'anthropic',
           requiresApiKey: !isServerConfigured,
         }),
@@ -70,7 +73,7 @@ export function WebSearchModelDialog({
       setTestStatus('error');
       setTestMessage(t('settings.connectionFailed'));
     }
-  }, [canTest, model, apiKey, isServerConfigured, t]);
+  }, [canTest, model, apiKey, baseUrl, isServerConfigured, t]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

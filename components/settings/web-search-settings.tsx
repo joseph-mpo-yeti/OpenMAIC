@@ -64,6 +64,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
           body: JSON.stringify({
             apiKey,
             model: `anthropic:${modelId}`,
+            baseUrl: config?.baseUrl || '',
             providerType: 'anthropic',
             requiresApiKey: !isServerConfigured,
           }),
@@ -128,9 +129,9 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
 
     const newTools = [...tools];
     if (editingToolIndex !== null) {
-      newTools[editingToolIndex] = editingTool;
+      newTools[editingToolIndex] = { type: editingTool.type.trim(), name: editingTool.name.trim() };
     } else {
-      newTools.push(editingTool);
+      newTools.push({ type: editingTool.type.trim(), name: editingTool.name.trim() });
     }
     setWebSearchProviderConfig(selectedProviderId, { tools: newTools });
     setIsToolDialogOpen(false);
@@ -160,9 +161,9 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
 
     const newModels = [...models];
     if (editingModelIndex !== null) {
-      newModels[editingModelIndex] = editingModel;
+      newModels[editingModelIndex] = { id: editingModel.id.trim(), name: editingModel.name.trim() };
     } else {
-      newModels.push(editingModel);
+      newModels.push({ id: editingModel.id.trim(), name: editingModel.name.trim() });
     }
     setWebSearchProviderConfig(selectedProviderId, { models: newModels });
     setIsModelDialogOpen(false);
