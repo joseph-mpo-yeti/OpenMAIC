@@ -154,7 +154,7 @@ export async function searchWithClaude(params: {
       }
     }
 
-    const answerText = answerParts.join('');
+    const answerText = answerParts.join('\n\n');
     const sources = Array.from(searchResultMap.values());
 
     // Fetch page content for sources that have no content from citations

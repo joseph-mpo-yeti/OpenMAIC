@@ -11,6 +11,7 @@ import { searchWithTavily, formatSearchResultsAsContext } from '@/lib/web-search
 import { searchWithClaude } from '@/lib/web-search/claude';
 import { WEB_SEARCH_PROVIDERS } from '@/lib/web-search/constants';
 import { resolveWebSearchApiKey } from '@/lib/server/provider-config';
+import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import {
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     };
     query = requestQuery;
 
-    // Default to tavily if no provider specified, but only if we have a valid provider
+    // Provider must be explicitly specified
     const providerId: WebSearchProviderId | null = requestProviderId ?? null;
 
     if (!query || !query.trim()) {
@@ -107,6 +108,14 @@ export async function POST(req: NextRequest) {
 
     const effectiveBaseUrl =
       providerConfig?.baseUrl || WEB_SEARCH_PROVIDERS[providerId].defaultBaseUrl || '';
+
+    // Validate client-supplied base URL against SSRF in production
+    if (providerConfig?.baseUrl && process.env.NODE_ENV === 'production') {
+      const ssrfError = validateUrlForSSRF(providerConfig.baseUrl);
+      if (ssrfError) {
+        return apiError('INVALID_URL', 400, ssrfError);
+      }
+    }
 
     let result;
     if (providerId === 'claude') {

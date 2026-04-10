@@ -798,12 +798,19 @@ export const useSettingsStore = create<SettingsState>()(
         // Web Search actions
         setWebSearchEnabled: (enabled) => {
           if (enabled) {
-            const cfg = get().webSearchProvidersConfig;
-            const hasUsable = Object.values(cfg).some((c) => c.isServerConfigured || c.apiKey);
-            if (!hasUsable) return;
-          }
-          set({ webSearchEnabled: enabled });
-          if (!enabled) {
+            const state = get();
+            const cfg = state.webSearchProvidersConfig;
+            const firstUsable = (Object.keys(cfg) as WebSearchProviderId[]).find(
+              (id) => cfg[id].isServerConfigured || cfg[id].apiKey,
+            );
+            if (!firstUsable) return;
+            set({ webSearchEnabled: true });
+            // Auto-select a provider when none is selected yet
+            if (!state.webSearchProviderId) {
+              get().setWebSearchProvider(firstUsable);
+            }
+          } else {
+            set({ webSearchEnabled: false });
             // Also deselect provider (which clears modelId per setWebSearchProvider logic)
             get().setWebSearchProvider(null);
           }
@@ -833,12 +840,30 @@ export const useSettingsStore = create<SettingsState>()(
             const apiKeyRemoved =
               'apiKey' in config && !config.apiKey && !updatedProviderConfig.isServerConfigured;
             const isSelected = state.webSearchProviderId === providerId;
+
+            // When the selected provider loses its key, try to switch to another usable provider
+            // or disable web search entirely
+            let extraUpdates: Record<string, unknown> = {};
+            if (apiKeyRemoved && isSelected) {
+              const updatedConfig = {
+                ...state.webSearchProvidersConfig,
+                [providerId]: updatedProviderConfig,
+              };
+              const otherUsable = (Object.keys(updatedConfig) as WebSearchProviderId[]).find(
+                (id) => id !== providerId && (updatedConfig[id].isServerConfigured || updatedConfig[id].apiKey),
+              );
+              extraUpdates = {
+                webSearchProviderId: otherUsable ?? null,
+                ...(otherUsable ? {} : { webSearchEnabled: false }),
+              };
+            }
+
             return {
               webSearchProvidersConfig: {
                 ...state.webSearchProvidersConfig,
                 [providerId]: updatedProviderConfig,
               },
-              ...(apiKeyRemoved && isSelected ? { webSearchProviderId: null } : {}),
+              ...extraUpdates,
             };
           }),
 

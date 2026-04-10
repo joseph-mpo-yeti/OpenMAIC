@@ -991,7 +991,7 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
                 <PDFSettings selectedProviderId={selectedPdfProviderId} />
               )}
               {activeSection === 'web-search' && selectedWebSearchProviderId && (
-                <WebSearchSettings selectedProviderId={selectedWebSearchProviderId} />
+                <WebSearchSettings key={selectedWebSearchProviderId} selectedProviderId={selectedWebSearchProviderId} />
               )}
               {activeSection === 'image' && (
                 <ImageSettings selectedProviderId={selectedImageProviderId} />

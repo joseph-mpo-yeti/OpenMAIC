@@ -45,20 +45,14 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
   const provider = WEB_SEARCH_PROVIDERS[selectedProviderId];
   const isServerConfigured = !!webSearchProvidersConfig[selectedProviderId]?.isServerConfigured;
 
-  const [prevSelectedProviderId, setPrevSelectedProviderId] = useState(selectedProviderId);
-  if (selectedProviderId !== prevSelectedProviderId) {
-    setPrevSelectedProviderId(selectedProviderId);
-    setShowApiKey(false);
-    setTestStatus('idle');
-    setTestMessage('');
-  }
-
   const handleTestConnection = useCallback(async () => {
     setTestStatus('testing');
     setTestMessage('');
 
     const config = webSearchProvidersConfig[selectedProviderId];
     const apiKey = config?.apiKey || '';
+    const baseUrl =
+      config?.baseUrl || WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl || '';
 
     try {
       if (selectedProviderId === 'claude') {
@@ -69,9 +63,10 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             apiKey,
+            baseUrl: baseUrl || undefined,
             model: `anthropic:${modelId}`,
             providerType: 'anthropic',
-            requiresApiKey: true,
+            requiresApiKey: !isServerConfigured,
           }),
         });
         const data = await response.json();
@@ -91,6 +86,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
             query: 'test connection',
             apiKey,
             providerId: selectedProviderId,
+            providerConfig: { baseUrl: baseUrl || undefined },
           }),
         });
         const data = await response.json();
@@ -106,7 +102,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
       setTestStatus('error');
       setTestMessage(t('settings.connectionFailed'));
     }
-  }, [webSearchProvidersConfig, selectedProviderId, t]);
+  }, [webSearchProvidersConfig, selectedProviderId, isServerConfigured, t]);
 
   // Guard against undefined provider
   if (!provider) {
@@ -440,6 +436,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
           WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl ||
           ''
         }
+        isServerConfigured={isServerConfigured}
       />
     </div>
   );

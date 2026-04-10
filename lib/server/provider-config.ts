@@ -92,6 +92,8 @@ const VIDEO_ENV_MAP: Record<string, string> = {
 const WEB_SEARCH_ENV_MAP: Record<string, string> = {
   TAVILY: 'tavily',
   CLAUDE: 'claude',
+  // Also recognise ANTHROPIC_API_KEY so server-config detection aligns with resolveWebSearchApiKey
+  ANTHROPIC: 'claude',
 };
 
 // ---------------------------------------------------------------------------

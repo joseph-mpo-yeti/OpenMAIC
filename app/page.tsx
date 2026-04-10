@@ -99,7 +99,13 @@ function HomePage() {
       // Migrate webSearchEnabled from old localStorage key into the Zustand store
       const oldWebSearch = localStorage.getItem('webSearchEnabled');
       if (oldWebSearch === 'true' && !useSettingsStore.getState().webSearchEnabled) {
-        useSettingsStore.getState().setWebSearchEnabled(true);
+        const store = useSettingsStore.getState();
+        // Ensure a default provider is selected for backwards compatibility (Tavily was the
+        // only provider before multi-provider support was added)
+        if (!store.webSearchProviderId) {
+          store.setWebSearchProvider('tavily');
+        }
+        store.setWebSearchEnabled(true);
       }
       if (oldWebSearch !== null) localStorage.removeItem('webSearchEnabled');
     } catch {

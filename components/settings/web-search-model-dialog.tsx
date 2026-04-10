@@ -25,6 +25,7 @@ interface WebSearchModelDialogProps {
   isEditing: boolean;
   apiKey?: string;
   baseUrl?: string;
+  isServerConfigured?: boolean;
 }
 
 export function WebSearchModelDialog({
@@ -36,12 +37,13 @@ export function WebSearchModelDialog({
   isEditing,
   apiKey,
   baseUrl,
+  isServerConfigured,
 }: WebSearchModelDialogProps) {
   const { t } = useI18n();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
 
-  const canTest = !!(model?.id?.trim() && model?.name?.trim() && apiKey);
+  const canTest = !!(model?.id?.trim() && model?.name?.trim() && (apiKey || isServerConfigured));
 
   const handleTest = useCallback(async () => {
     if (!canTest || !model) return;
@@ -53,9 +55,10 @@ export function WebSearchModelDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           apiKey,
+          baseUrl: baseUrl || undefined,
           model: `anthropic:${model.id}`,
           providerType: 'anthropic',
-          requiresApiKey: true,
+          requiresApiKey: !isServerConfigured,
         }),
       });
       const data = await response.json();
@@ -70,7 +73,7 @@ export function WebSearchModelDialog({
       setTestStatus('error');
       setTestMessage(t('settings.connectionFailed'));
     }
-  }, [canTest, model, apiKey, t]);
+  }, [canTest, model, apiKey, baseUrl, isServerConfigured, t]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -101,7 +104,7 @@ export function WebSearchModelDialog({
                 setTestStatus('idle');
                 setTestMessage('');
               }}
-              placeholder="claude-opus-4.6"
+              placeholder="claude-opus-4-6"
               className="font-mono text-sm"
             />
           </div>
