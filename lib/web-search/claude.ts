@@ -36,7 +36,7 @@ const log = createLogger('ClaudeSearch');
 
 /** Fetch a URL and return plain text extracted from its HTML. Returns empty string on any failure. */
 async function fetchPageContent(url: string): Promise<string> {
-  const ssrfError = validateUrlForSSRF(url);
+  const ssrfError = await validateUrlForSSRF(url);
   if (ssrfError) {
     log.warn(`Blocked page fetch due to SSRF check [url="${url}" reason="${ssrfError}"]`);
     return '';

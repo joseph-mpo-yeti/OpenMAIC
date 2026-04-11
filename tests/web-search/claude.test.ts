@@ -5,6 +5,35 @@ vi.mock('@/lib/server/proxy-fetch', () => ({
   proxyFetch: vi.fn(),
 }));
 
+// Mock ssrf-guard to avoid real DNS lookups in tests
+vi.mock('@/lib/server/ssrf-guard', () => ({
+  validateUrlForSSRF: async (url: string): Promise<string> => {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return 'Invalid URL';
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return 'Only HTTP(S) URLs are allowed';
+    }
+    const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
+    const privatePatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./,
+      /^169\.254\./,
+      /^::1$/,
+    ];
+    if (privatePatterns.some((p) => p.test(hostname))) {
+      return 'Local/private network URLs are not allowed';
+    }
+    return '';
+  },
+}));
+
 vi.mock('@/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
