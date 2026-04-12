@@ -1,0 +1,118 @@
+name: Daily Upstream Sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC every day
+  workflow_dispatch:       # Allow manual trigger from the Actions tab
+
+jobs:
+  sync:
+    name: Sync upstream main → fork main → feat/claude-search
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use a PAT with repo scope so the push can trigger downstream CI.
+          # Fall back to GITHUB_TOKEN if the secret is absent.
+          token: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/THU-MAIC/OpenMAIC.git
+
+      # ── Step 1: sync fork main ────────────────────────────────────────────
+      - name: Fetch upstream main
+        run: git fetch upstream main
+
+      - name: Merge upstream/main → fork main
+        run: |
+          git checkout main
+          if git merge upstream/main --no-edit; then
+            echo "main: clean merge ✓"
+          else
+            echo "::error::Conflicts merging upstream/main into main — manual intervention required."
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Push updated main
+        run: git push origin main
+
+      # ── Step 2: merge main → feat/claude-search ──────────────────────────
+      - name: Fetch feat/claude-search
+        run: git fetch origin feat/claude-search
+
+      - name: Checkout feat/claude-search
+        run: git checkout feat/claude-search
+
+      - name: Merge main into feat/claude-search
+        id: merge
+        run: |
+          if git merge main --no-edit; then
+            echo "feat/claude-search: clean merge ✓"
+            echo "had_conflicts=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Conflicts detected — auto-resolving..."
+            echo "had_conflicts=true" >> "$GITHUB_OUTPUT"
+
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            echo "Conflicting files:"
+            echo "$CONFLICTS"
+
+            while IFS= read -r f; do
+              case "$f" in
+                pnpm-lock.yaml)
+                  # Will be regenerated below; stage a placeholder for now
+                  git checkout --ours "$f" 2>/dev/null || true
+                  git add "$f"
+                  ;;
+                *)
+                  # Prefer our (feat/claude-search) version for all other files
+                  git checkout --ours "$f"
+                  git add "$f"
+                  ;;
+              esac
+            done <<< "$CONFLICTS"
+
+            # Regenerate lockfile if it was among the conflicts
+            if echo "$CONFLICTS" | grep -q "pnpm-lock.yaml"; then
+              pnpm install --lockfile-only
+              git add pnpm-lock.yaml
+            fi
+
+            git commit -m "chore: merge main into feat/claude-search [auto-resolved conflicts]"
+          fi
+
+      - name: Push feat/claude-search
+        run: git push origin feat/claude-search
+
+      # ── Step 3: report ───────────────────────────────────────────────────
+      - name: Summary
+        run: |
+          echo "### Sync complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`main\` | synced with upstream ✓ |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.merge.outputs.had_conflicts }}" = "true" ]; then
+            echo "| \`feat/claude-search\` | merged (conflicts auto-resolved) ⚠️ |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| \`feat/claude-search\` | merged cleanly ✓ |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "CI on \`feat/claude-search\` will now re-run automatically via the PR." >> "$GITHUB_STEP_SUMMARY"
