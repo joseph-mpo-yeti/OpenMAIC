@@ -1,0 +1,79 @@
+name: Merge main into feat/claude-search
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 1 hour
+        run: sleep 3600
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/claude-search
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch latest main
+        run: git fetch origin main
+
+      - name: Check for new commits in main not in feat/claude-search
+        id: check
+        run: |
+          NEW_COMMITS=$(git log HEAD..origin/main --oneline | wc -l | tr -d ' ')
+          echo "new_commits=$NEW_COMMITS" >> "$GITHUB_OUTPUT"
+          if [ "$NEW_COMMITS" -gt 0 ]; then
+            echo "has_new_commits=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_new_commits=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attempt merge of main into feat/claude-search
+        id: merge
+        if: steps.check.outputs.has_new_commits == 'true'
+        run: |
+          if git merge origin/main --no-edit; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            git merge --abort
+          fi
+
+      - name: Push merged branch
+        if: steps.check.outputs.has_new_commits == 'true' && steps.merge.outputs.conflict == 'false'
+        run: git push origin feat/claude-search
+
+      - name: Send conflict notification email
+        if: steps.merge.outputs.conflict == 'true'
+        uses: dawidd6/action-send-mail@2cea9617b09d79a095af21254fbcb7ae95903dde # v3.12.0
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ secrets.MAIL_TO }}
+          from: ${{ secrets.MAIL_FROM }}
+          subject: "Merge conflict: main → feat/claude-search in ${{ github.repository }}"
+          body: |
+            A merge conflict was detected while attempting to merge the main branch
+            into feat/claude-search. The merge has been rolled back.
+
+            Please resolve the conflicts manually.
+
+            Repository: ${{ github.repository }}
+            Triggered by CI run: ${{ github.event.workflow_run.html_url }}
