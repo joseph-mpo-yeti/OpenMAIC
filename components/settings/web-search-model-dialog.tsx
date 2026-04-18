@@ -21,23 +21,28 @@ interface WebSearchModelDialogProps {
   onOpenChange: (open: boolean) => void;
   model: { id: string; name: string } | null;
   setModel: (model: { id: string; name: string } | null) => void;
+  isModelValid: (
+    providerId: string,
+    modelId: string,
+  ) => Promise<{ status: boolean; error?: string }>;
   onSave: () => void;
   isEditing: boolean;
   apiKey?: string;
+  providerId: string;
   isServerConfigured?: boolean;
-  baseUrl?: string;
 }
 
 export function WebSearchModelDialog({
   open,
-  onOpenChange,
   model,
-  setModel,
-  onSave,
   isEditing,
+  providerId,
   apiKey,
   isServerConfigured,
-  baseUrl,
+  onOpenChange,
+  setModel,
+  onSave,
+  isModelValid,
 }: WebSearchModelDialogProps) {
   const { t } = useI18n();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -47,33 +52,22 @@ export function WebSearchModelDialog({
 
   const handleTest = useCallback(async () => {
     if (!canTest || !model) return;
-    setTestStatus('testing');
-    setTestMessage('');
     try {
-      const response = await fetch('/api/verify-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey,
-          model: `anthropic:${model.id}`,
-          baseUrl: baseUrl || '',
-          providerType: 'anthropic',
-          requiresApiKey: !isServerConfigured,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
+      setTestStatus('testing');
+      setTestMessage('');
+      const { status, error } = await isModelValid(providerId, model.id);
+      if (status) {
         setTestStatus('success');
         setTestMessage(t('settings.connectionSuccess'));
       } else {
         setTestStatus('error');
-        setTestMessage(data.error || t('settings.connectionFailed'));
+        setTestMessage(error || t('settings.connectionFailed'));
       }
     } catch {
       setTestStatus('error');
       setTestMessage(t('settings.connectionFailed'));
     }
-  }, [canTest, model, apiKey, baseUrl, isServerConfigured, t]);
+  }, [canTest, model, providerId, t, isModelValid]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

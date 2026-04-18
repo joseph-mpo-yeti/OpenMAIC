@@ -407,9 +407,9 @@ export function resolveVideoBaseUrl(
 // ---------------------------------------------------------------------------
 
 /** Returns server-configured web search providers (no apiKeys exposed) */
-export function getServerWebSearchProviders(): Record<string, { baseUrl?: string }> {
+export function getServerWebSearchProviders(): Record<string, { baseUrl?: string; path?: string }> {
   const cfg = getConfig();
-  const result: Record<string, { baseUrl?: string }> = {};
+  const result: Record<string, { baseUrl?: string; path?: string }> = {};
   for (const [id, entry] of Object.entries(cfg.webSearch)) {
     result[id] = {};
     if (entry.baseUrl) result[id].baseUrl = entry.baseUrl;

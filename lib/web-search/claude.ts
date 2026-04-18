@@ -9,28 +9,17 @@ import { proxyFetch } from '@/lib/server/proxy-fetch';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 import { createLogger } from '@/lib/logger';
 import type { WebSearchResult, WebSearchSource } from '@/lib/types/web-search';
+import Anthropic from '@anthropic-ai/sdk';
+import { Tool, WebSearchTool20260209 } from '@anthropic-ai/sdk/resources';
+
+const DEFAULT_WEB_SEARCH_TOOL: WebSearchTool20260209 = {
+  type: 'web_search_20260209',
+  name: 'web_search',
+  allowed_callers: ['direct'],
+};
 
 const PAGE_CONTENT_MAX_LENGTH = 2000;
 const PAGE_FETCH_TIMEOUT_MS = 5000;
-
-interface SearchContent {
-  url: string;
-  title: string;
-  content?: string;
-  type?: string;
-  cited_text?: string;
-}
-
-interface SearchResultItem {
-  type: string;
-  content?: SearchContent[];
-  citations?: SearchContent[];
-  text?: string;
-}
-
-interface SearchResult {
-  content: SearchResultItem[];
-}
 
 const log = createLogger('ClaudeSearch');
 
@@ -76,60 +65,49 @@ export async function searchWithClaude(params: {
   apiKey: string;
   modelId?: string;
   baseUrl: string;
-  tools?: Array<{ type: string; name: string }>;
+  tools?: Tool[];
 }): Promise<WebSearchResult> {
-  const { query, apiKey, modelId: rawModelId, baseUrl, tools } = params;
+  const { query, apiKey, modelId: rawModelId, baseUrl, tools: rawTools } = params;
   const modelId = rawModelId?.trim() || 'claude-sonnet-4-6';
-  const apiVersion = '2023-06-01';
-  const endpoint = `${baseUrl}/v1/messages`;
+  const tools: (Tool | WebSearchTool20260209)[] =
+    rawTools && rawTools.length > 0
+      ? rawTools.map(
+          (t) => ({ ...t, allowed_callers: ['direct'] }) as Tool & { allowed_callers: string[] },
+        )
+      : [DEFAULT_WEB_SEARCH_TOOL];
 
   try {
     const startTime = Date.now();
-    const res = await proxyFetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': apiVersion,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelId,
+    const client = new Anthropic({ baseURL: baseUrl, apiKey, fetch: proxyFetch as typeof fetch });
+    const response = await client.messages
+      .create({
         max_tokens: 4096,
-        stream: false,
         messages: [
           {
             role: 'user',
             content: `Search for the following and provide a comprehensive summary with source links: ${query}.`,
           },
         ],
-        tools: (tools?.length ? tools : [{ type: 'web_search_20260209', name: 'web_search' }]).map(
-          (t) => {
-            return { ...t, allowed_callers: ['direct'] };
-          },
-        ),
-      }),
-    });
+        model: modelId || '',
+        tools: tools as Tool[],
+      })
+      .catch(async (err) => {
+        if (err instanceof Anthropic.APIError) {
+          throw new Error(`Claude API error (${err.status}): ${err.message}`);
+        } else {
+          throw err;
+        }
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => '');
-      throw new Error(`Claude API error (${res.status}): ${errorText || res.statusText}`);
-    }
-
-    const data = (await res.json()) as SearchResult;
-    const contentBlocks: SearchResultItem[] = data.content || [];
+    const contentBlocks = response.content;
 
     // Extract search results from web_search_tool_result blocks
     const searchResultMap = new Map<string, WebSearchSource>();
     for (const block of contentBlocks) {
       if (block.type !== 'web_search_tool_result') continue;
-      for (const result of block.content || []) {
-        if (result.type !== 'web_search_result') continue;
-        if (!searchResultMap.has(result.url)) {
-          searchResultMap.set(result.url, {
-            title: result.title || result.url,
-            url: result.url,
-            content: '',
-          });
+      for (const source of getWebSearchResult(block.content)) {
+        if (!searchResultMap.has(source.url)) {
+          searchResultMap.set(source.url, source);
         }
       }
     }
@@ -141,13 +119,14 @@ export async function searchWithClaude(params: {
         answerParts.push(block.text);
         // If the block carries citations, make sure those sources are captured
         for (const citation of block.citations || []) {
-          if (citation.url && !searchResultMap.has(citation.url)) {
+          if (citation.type !== 'web_search_result_location') continue;
+          if (!searchResultMap.has(citation.url)) {
             searchResultMap.set(citation.url, {
               title: citation.title || citation.url,
               url: citation.url,
               content: citation.cited_text || '',
             });
-          } else if (citation.url) {
+          } else {
             const existing = searchResultMap.get(citation.url)!;
             if (!existing.content && citation.cited_text) {
               existing.content = citation.cited_text;
@@ -182,6 +161,13 @@ export async function searchWithClaude(params: {
     log.error('Claude search failed', e);
     throw e;
   }
+}
+
+function getWebSearchResult(content: Anthropic.WebSearchToolResultBlockContent): WebSearchSource[] {
+  if (!Array.isArray(content)) return [];
+  return content
+    .filter((r) => r.type === 'web_search_result')
+    .map((r) => ({ title: r.title || r.url, url: r.url, content: '' }));
 }
 
 /**

@@ -32,6 +32,7 @@ import {
 import type { UserRequirements } from '@/lib/types/generation';
 import type { Scene, Stage } from '@/lib/types/stage';
 import { AGENT_COLOR_PALETTE, AGENT_DEFAULT_AVATARS } from '@/lib/constants/agent-defaults';
+import { Tool } from '@anthropic-ai/sdk/resources';
 
 const log = createLogger('Classroom');
 
@@ -277,7 +278,7 @@ export async function generateClassroom(
               apiKey: searchKey,
               baseUrl: effectiveBaseUrl,
               modelId: input.webSearchModelId,
-              tools: input.webSearchTools,
+              tools: input.webSearchTools?.map((t) => t as Tool) || [],
             });
           } else {
             searchResult = await searchWithTavily({

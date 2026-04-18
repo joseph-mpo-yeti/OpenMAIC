@@ -13,6 +13,7 @@ export const WEB_SEARCH_PROVIDERS: Record<WebSearchProviderId, WebSearchProvider
     name: 'Tavily',
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.tavily.com',
+    path: '/search',
     icon: '/logos/tavily.svg',
   },
   claude: {
@@ -21,6 +22,7 @@ export const WEB_SEARCH_PROVIDERS: Record<WebSearchProviderId, WebSearchProvider
     requiresApiKey: true,
     defaultBaseUrl: 'https://api.anthropic.com',
     icon: '/logos/claude.svg',
+    path: '/v1/messages',
     models: [
       { id: 'claude-opus-4-6', name: 'Claude Opus 4.6' },
       { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6' },

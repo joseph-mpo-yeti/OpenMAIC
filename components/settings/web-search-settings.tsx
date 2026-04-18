@@ -46,64 +46,76 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
   const provider = WEB_SEARCH_PROVIDERS[selectedProviderId];
   const isServerConfigured = !!webSearchProvidersConfig[selectedProviderId]?.isServerConfigured;
 
+  const isModelValid = useCallback(
+    async (providerId: string, modelId?: string): Promise<{ status: boolean; error?: string }> => {
+      const config = webSearchProvidersConfig[selectedProviderId];
+      const apiKey = config?.apiKey || '';
+      const baseUrl =
+        config?.baseUrl || WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl || '';
+
+      switch (providerId) {
+        case 'tavily': {
+          const response = await fetch('/api/web-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: 'test connection',
+              baseUrl,
+              apiKey,
+              providerId: providerId,
+              providerConfig: { baseUrl: baseUrl || undefined },
+            }),
+          });
+          const data = await response.json();
+          return Promise.resolve({ status: data.success || response.ok, error: data.error });
+        }
+        case 'claude': {
+          // Use verify-model endpoint with the selected (or default) model
+          const model = modelId || config?.modelId || 'claude-haiku-4-5';
+          const response = await fetch('/api/web-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: 'test connection',
+              apiKey,
+              providerType: 'anthropic',
+              providerId: providerId,
+              requiresApiKey: !isServerConfigured,
+              providerConfig: {
+                baseUrl,
+                modelId: model,
+                tools: [],
+              },
+            }),
+          });
+          const data = await response.json();
+          return Promise.resolve({ status: data.success, error: data.error });
+        }
+        default: {
+          return Promise.reject({ status: false });
+        }
+      }
+    },
+    [webSearchProvidersConfig, isServerConfigured, selectedProviderId],
+  );
+
   const handleTestConnection = useCallback(async () => {
-    setTestStatus('testing');
-    setTestMessage('');
-
-    const config = webSearchProvidersConfig[selectedProviderId];
-    const apiKey = config?.apiKey || '';
-    const baseUrl =
-      config?.baseUrl || WEB_SEARCH_PROVIDERS[selectedProviderId]?.defaultBaseUrl || '';
-
     try {
-      if (selectedProviderId === 'claude') {
-        // Use verify-model endpoint with the selected (or default) Claude model
-        const modelId = config?.modelId || 'claude-sonnet-4-6';
-        const response = await fetch('/api/verify-model', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            apiKey,
-            model: `anthropic:${modelId}`,
-            baseUrl: config?.baseUrl || '',
-            providerType: 'anthropic',
-            requiresApiKey: !isServerConfigured,
-          }),
-        });
-        const data = await response.json();
-        if (data.success) {
-          setTestStatus('success');
-          setTestMessage(t('settings.connectionSuccess'));
-        } else {
-          setTestStatus('error');
-          setTestMessage(data.error || t('settings.connectionFailed'));
-        }
+      setTestStatus('testing');
+      setTestMessage('');
+      const { status, error } = await isModelValid(selectedProviderId);
+      if (status) {
+        setTestStatus('success');
+        setTestMessage(t('settings.connectionSuccess'));
       } else {
-        // For other providers (Tavily), test via the web search endpoint
-        const response = await fetch('/api/web-search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: 'test connection',
-            apiKey,
-            providerId: selectedProviderId,
-            providerConfig: { baseUrl: baseUrl || undefined },
-          }),
-        });
-        const data = await response.json();
-        if (data.success || response.ok) {
-          setTestStatus('success');
-          setTestMessage(t('settings.connectionSuccess'));
-        } else {
-          setTestStatus('error');
-          setTestMessage(data.error || t('settings.connectionFailed'));
-        }
+        setTestStatus('error');
+        setTestMessage(error || t('settings.connectionFailed'));
       }
     } catch {
       setTestStatus('error');
       setTestMessage(t('settings.connectionFailed'));
     }
-  }, [webSearchProvidersConfig, selectedProviderId, isServerConfigured, t]);
+  }, [selectedProviderId, isModelValid, t]);
 
   // Guard against undefined provider
   if (!provider) {
@@ -185,6 +197,19 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
     setWebSearchProviderConfig(selectedProviderId, { models: newModels });
   };
 
+  const getApiKeyLabel = (selectedProviderId: string) => {
+    switch (selectedProviderId) {
+      case 'claude': {
+        return t('settings.webSearchClaudeApiKey');
+      }
+      case 'tavily': {
+        return t('settings.webSearchTavilyApiKey');
+      }
+      default:
+        return t('settings.webSearchApiKey');
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-3xl">
       {isServerConfigured && (
@@ -197,13 +222,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
         <>
           {/* API Key */}
           <div className="space-y-2">
-            <Label className="text-sm">
-              {selectedProviderId === 'claude'
-                ? t('settings.webSearchClaudeApiKey')
-                : selectedProviderId === 'tavily'
-                  ? t('settings.webSearchTavilyApiKey')
-                  : t('settings.webSearchApiKey')}
-            </Label>
+            <Label className="text-sm">{getApiKeyLabel(selectedProviderId)}</Label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
@@ -303,7 +322,7 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
                 provider.defaultBaseUrl ||
                 '';
               if (!effectiveBaseUrl) return null;
-              const endpointPath = selectedProviderId === 'claude' ? '/v1/messages' : '/search';
+              const endpointPath = WEB_SEARCH_PROVIDERS[selectedProviderId]?.path || '';
               return (
                 <p className="text-xs text-muted-foreground break-all">
                   {t('settings.requestUrl')}: {effectiveBaseUrl}
@@ -439,7 +458,9 @@ export function WebSearchSettings({ selectedProviderId }: WebSearchSettingsProps
         setModel={setEditingModel}
         onSave={handleSaveModel}
         isEditing={editingModelIndex !== null}
+        isModelValid={isModelValid}
         apiKey={webSearchProvidersConfig[selectedProviderId]?.apiKey || ''}
+        providerId={selectedProviderId || ''}
         isServerConfigured={isServerConfigured}
       />
     </div>

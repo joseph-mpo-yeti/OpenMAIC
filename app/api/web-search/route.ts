@@ -21,6 +21,7 @@ import {
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
 import type { AICallFn } from '@/lib/generation/pipeline-types';
 import type { WebSearchProviderId } from '@/lib/web-search/types';
+import { Tool } from '@anthropic-ai/sdk/resources';
 
 const log = createLogger('WebSearch');
 
@@ -118,24 +119,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const effectiveBaseUrl =
+    const baseUrl =
       providerConfig?.baseUrl || WEB_SEARCH_PROVIDERS[providerId].defaultBaseUrl || '';
 
     let result;
-    if (providerId === 'claude') {
-      result = await searchWithClaude({
-        query: searchQuery.query,
-        apiKey,
-        baseUrl: effectiveBaseUrl,
-        modelId: providerConfig?.modelId,
-        tools: providerConfig?.tools,
-      });
-    } else {
-      result = await searchWithTavily({
-        query: searchQuery.query,
-        apiKey,
-        baseUrl: effectiveBaseUrl,
-      });
+    switch (providerId) {
+      case 'claude': {
+        const defaultTool = { type: 'web_search_20260209', name: 'web_search' };
+        const tools = (providerConfig?.tools?.length ? providerConfig?.tools : [defaultTool]).map(
+          (tool) => {
+            return { ...tool, allowed_callers: ['direct'] } as Tool;
+          },
+        );
+
+        result = await searchWithClaude({
+          query: searchQuery.query,
+          apiKey,
+          baseUrl,
+          tools,
+          modelId: providerConfig?.modelId,
+        });
+        break;
+      }
+      case 'tavily': {
+        result = await searchWithTavily({
+          query: searchQuery.query,
+          apiKey,
+          baseUrl,
+        });
+        break;
+      }
     }
     const context = formatSearchResultsAsContext(result);
 

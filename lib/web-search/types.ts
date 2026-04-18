@@ -21,5 +21,6 @@ export interface WebSearchProviderConfig {
   requiresApiKey: boolean;
   defaultBaseUrl?: string;
   icon?: string;
+  path?: string;
   models?: WebSearchModel[];
 }
