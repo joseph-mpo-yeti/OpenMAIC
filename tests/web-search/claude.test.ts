@@ -114,7 +114,7 @@ describe('searchWithClaude', () => {
     });
 
     const body = JSON.parse(mockProxyFetch.mock.calls[0][1].body);
-    expect(body.tools).toEqual(customTools);
+    expect(body.tools).toEqual(customTools.map((t) => ({ ...t, allowed_callers: ['direct'] })));
   });
 
   it('uses default web_search tool when tools is undefined', async () => {
@@ -122,7 +122,9 @@ describe('searchWithClaude', () => {
     await search({ query: 'test', apiKey: 'sk-test', baseUrl: 'https://api.anthropic.com' });
 
     const body = JSON.parse(mockProxyFetch.mock.calls[0][1].body);
-    expect(body.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search' }]);
+    expect(body.tools).toEqual([
+      { type: 'web_search_20260209', name: 'web_search', allowed_callers: ['direct'] },
+    ]);
   });
 
   it('uses default web_search tool when tools is an empty array', async () => {
@@ -135,7 +137,9 @@ describe('searchWithClaude', () => {
     });
 
     const body = JSON.parse(mockProxyFetch.mock.calls[0][1].body);
-    expect(body.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search' }]);
+    expect(body.tools).toEqual([
+      { type: 'web_search_20260209', name: 'web_search', allowed_callers: ['direct'] },
+    ]);
   });
 
   // ── page content fetching ────────────────────────────────────────────────
